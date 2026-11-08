@@ -7,7 +7,15 @@ backed up, what changed on the firewall, and who is on the network.
 > Node.js · Express · PostgreSQL · SQLite · Prometheus / Loki / Alertmanager · Proxmox VE API ·
 > OPNsense API · UniFi API · TOTP · vanilla JS (no framework, no `innerHTML`)
 
-<!-- Screenshot: replace with docs/img/overview.png -->
+![Overview](docs/img/overview.png)
+
+| Network map: ISP → firewall → VLANs → Wi-Fi | Infrastructure: every LXC/VM |
+|---|---|
+| ![Network](docs/img/network.png) | ![Infrastructure](docs/img/infra.png) |
+| **Docker: health, logs, TOTP-gated restart** | **Backups: freshness per guest** |
+| ![Docker](docs/img/docker.png) | ![Backups](docs/img/backups.png) |
+
+<sub>Screenshots come from a read-only copy of my live instance. Addresses, Wi-Fi names, MACs and provider names are masked.</sub>
 
 ## Features
 | Page | What it does |
