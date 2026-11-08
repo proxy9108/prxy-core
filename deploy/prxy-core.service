@@ -1,0 +1,29 @@
+[Unit]
+Description=Prxy Core - homelab control center
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=prxy
+Group=prxy
+WorkingDirectory=/opt/prxy-core
+EnvironmentFile=/etc/prxy-core/env
+Environment=NODE_ENV=production DATA_DIR=/var/lib/prxy-core TLS_DIR=/etc/prxy-core/tls PORT=8443
+ExecStart=/usr/bin/node server.js
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/var/lib/prxy-core
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

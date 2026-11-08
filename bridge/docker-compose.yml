@@ -1,0 +1,31 @@
+# Prxy Docker Bridge - run from /opt/prxy-docker-bridge on LXC 110.
+# Secrets and TLS files live next to this file (mode 600, owned by uid 1000) and are never in git.
+services:
+  prxy-docker-bridge:
+    image: node:22-alpine
+    container_name: prxy-docker-bridge
+    command: ["node", "/app/server.js"]
+    restart: unless-stopped
+    user: "1000:1000"
+    group_add:
+      - "${DOCKER_GID}"
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    tmpfs: ["/tmp"]
+    ports:
+      - "10.20.40.110:8098:8098"
+    environment:
+      PORT: "8098"
+      ALLOW_FROM: "10.20.40.136"
+      SELF_NAME: "prxy-docker-bridge"
+      SECRET_FILE: /run/bridge/secret
+      TLS_KEY: /run/bridge/key.pem
+      TLS_CERT: /run/bridge/cert.pem
+      CONTROLLED: "agent-panel,autotrack-backend,autotrack-frontend,bot-code-editor,cadvisor,cloudflared,discord-bot,docker-socket-proxy,homepage,minigames,minigames-api,net-traffic,npm,pihole-exporter,portainer,system-health,unturned-stats"
+    volumes:
+      - ./server.js:/app/server.js:ro
+      - ./secret:/run/bridge/secret:ro
+      - ./tls/key.pem:/run/bridge/key.pem:ro
+      - ./tls/cert.pem:/run/bridge/cert.pem:ro
+      - /var/run/docker.sock:/var/run/docker.sock

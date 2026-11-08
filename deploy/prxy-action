@@ -1,0 +1,31 @@
+#!/bin/bash
+# Prxy Core restricted action runner - installed on each LXC as
+# /usr/local/sbin/prxy-action and bound to Prxy Core's SSH key with
+#   restrict,from="10.20.40.136",command="/usr/local/sbin/prxy-action"
+# so that key can do nothing except what this script allows. Requests are
+# "<op> <name>" where name must appear in /etc/prxy-action.allow as
+#   systemd <unit>    or    docker <container>    or    backupdir <label> <path>
+set -u
+CONF=/etc/prxy-action.allow
+read -r op name extra <<< "${SSH_ORIGINAL_COMMAND:-}"
+if [[ -n "${extra:-}" || -z "${op:-}" || -z "${name:-}" ]]; then echo "usage: <restart|status|logs> <name>" >&2; exit 2; fi
+if [[ ! "$name" =~ ^[A-Za-z0-9@._-]+$ ]]; then echo "invalid name" >&2; exit 2; fi
+kind=$(awk -v n="$name" '$1 !~ /^#/ && $2 == n { print $1; exit }' "$CONF" 2>/dev/null)
+if [[ -z "$kind" ]]; then echo "not allowed: $name" >&2; exit 3; fi
+logger -t prxy-action "op=$op kind=$kind name=$name from=${SSH_CLIENT%% *}"
+case "$kind:$op" in
+  systemd:restart) exec systemctl restart -- "$name" ;;
+  systemd:status)  exec systemctl show -p ActiveState,SubState,ActiveEnterTimestamp,NRestarts -- "$name" ;;
+  systemd:logs)    exec journalctl -u "$name" -n 200 --no-pager -o short-iso ;;
+  docker:restart)  exec docker restart -- "$name" ;;
+  docker:status)   exec docker inspect -f 'ActiveState={{.State.Status}}
+StartedAt={{.State.StartedAt}}
+RestartCount={{.RestartCount}}
+Health={{if .State.Health}}{{.State.Health.Status}}{{end}}' -- "$name" ;;
+  docker:logs)     exec docker logs --tail 200 --timestamps -- "$name" 2>&1 ;;
+  backupdir:list)
+    dir=$(awk -v n="$name" '$1 == "backupdir" && $2 == n { print $3; exit }' "$CONF")
+    [[ -d "$dir" ]] || { echo "missing: $dir" >&2; exit 4; }
+    exec find "$dir" -maxdepth 1 -type f -printf '%T@ %s %f\n' ;;
+  *) echo "operation not allowed: $op" >&2; exit 3 ;;
+esac
